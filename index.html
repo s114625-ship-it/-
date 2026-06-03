@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>剪刀石頭布淘汰賽</title>
+
+<style>
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+    font-family:"Microsoft JhengHei",sans-serif;
+}
+
+body{
+    min-height:100vh;
+    color:white;
+    padding:20px;
+    overflow-x:hidden;
+
+    background:
+    linear-gradient(
+        rgba(0,0,0,.35),
+        rgba(0,0,0,.35)
+    ),
+    linear-gradient(
+        180deg,
+        #1b5e20 0%,
+        #2e7d32 25%,
+        #388e3c 50%,
+        #2e7d32 75%,
+        #1b5e20 100%
+    );
+}
+
+body::before{
+    content:"🌲 🌳 🍃 🌿 🌲 🌳 🍄 🌲 🌿 🍃 🌳 🌲";
+    position:fixed;
+    inset:0;
+    font-size:52px;
+    opacity:.08;
+    display:flex;
+    flex-wrap:wrap;
+    justify-content:space-around;
+    align-items:center;
+    pointer-events:none;
+    z-index:-1;
+}
+
+body::after{
+    content:"🦉 🦌 🐿️ 🍄 🦋 🌲 🐇 🍃 🦌 🦋";
+    position:fixed;
+    inset:0;
+    font-size:42px;
+    opacity:.05;
+    display:flex;
+    flex-wrap:wrap;
+    justify-content:space-evenly;
+    align-items:center;
+    pointer-events:none;
+    z-index:-1;
+}
+
+.container{
+    max-width:1100px;
+    margin:auto;
+}
+
+h1{
+    text-align:center;
+    margin-bottom:20px;
+    font-size:42px;
+    text-shadow:0 0 15px rgba(255,255,255,.3);
+}
+
+.card{
+    background:rgba(255,255,255,.12);
+    backdrop-filter:blur(14px);
+    border:1px solid rgba(255,255,255,.15);
+    border-radius:18px;
+    padding:20px;
+    margin-bottom:20px;
+}
+
+button{
+    border:none;
+    border-radius:12px;
+    cursor:pointer;
+    padding:12px 20px;
+    margin:5px;
+    font-size:16px;
+    transition:.25s;
+}
+
+button:hover{
+    transform:translateY(-2px);
+}
+
+.choice-btn{
+    font-size:24px;
+    min-width:130px;
+}
+
+.start-btn{
+    background:#4CAF50;
+    color:white;
+}
+
+.reset-btn{
+    background:#e53935;
+    color:white;
+}
+
+.player-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
+    gap:12px;
+    margin-top:20px;
+}
+
+.player{
+    padding:14px;
+    text-align:center;
+    border-radius:12px;
+}
+
+.alive{
+    background:rgba(76,175,80,.25);
+    border:2px solid #66bb6a;
+    box-shadow:0 0 18px rgba(102,187,106,.35);
+}
+
+.eliminated{
+    background:rgba(244,67,54,.25);
+    border:2px solid #ef5350;
+    opacity:.45;
+}
+
+#log{
+    min-height:220px;
+    font-size:18px;
+    line-height:2;
+}
+
+select{
+    padding:10px;
+    border-radius:10px;
+    font-size:16px;
+}
+
+.fullscreen{
+    height:100vh;
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    align-items:center;
+    text-align:center;
+}
+
+.rank-title{
+    font-size:90px;
+    color:#ff5252;
+}
+
+.rank-text{
+    font-size:60px;
+    margin-top:20px;
+}
+
+.champion-title{
+    font-size:130px;
+    animation:bounce 1s infinite alternate;
+    filter:drop-shadow(0 0 20px gold);
+}
+
+.champion-text{
+    font-size:60px;
+    margin-top:25px;
+}
+
+@keyframes bounce{
+    from{
+        transform:scale(1);
+    }
+    to{
+        transform:scale(1.08);
+    }
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<h1>🏆 剪刀石頭布淘汰賽</h1>
+
+<div class="card" id="setupCard">
+
+    <h2>比賽設定</h2>
+
+    <br>
+
+    <label>參賽人數：</label>
+
+    <select id="playerCount">
+        <option value="3">3 人</option>
+        <option value="4">4 人</option>
+        <option value="5">5 人</option>
+        <option value="6">6 人</option>
+        <option value="7">7 人</option>
+        <option value="8">8 人</option>
+    </select>
+
+    <button class="start-btn" onclick="startGame()">
+        開始比賽
+    </button>
+
+</div>
+
+<div class="card" id="gameCard" style="display:none;">
+
+    <h2 id="roundTitle">
+        第1回合
+    </h2>
+
+    <br>
+
+    <h3>請選擇出拳</h3>
+
+    <br>
+
+    <button class="choice-btn" onclick="playRound('石頭')">
+        ✊ 石頭
+    </button>
+
+    <button class="choice-btn" onclick="playRound('剪刀')">
+        ✌️ 剪刀
+    </button>
+
+    <button class="choice-btn" onclick="playRound('布')">
+        🖐️ 布
+    </button>
+
+    <div id="players" class="player-grid"></div>
+
+</div>
+
+<div class="card">
+
+    <h2>本回合紀錄</h2>
+
+    <br>
+
+    <div id="log">
+        等待開始...
+    </div>
+
+</div>
+
+<div style="text-align:center;">
+    <button
+        class="reset-btn"
+        onclick="location.reload()">
+        🔄 重新開始
+    </button>
+</div>
+
+</div>
+
+<script>
+
+const computerNames = [
+"👨 阿哲",
+"👩 小雅",
+"🧑 阿明",
+"👨‍💻 Kevin",
+"👩‍🎓 Emma",
+"🧑‍🚀 Leo",
+"👨‍🍳 Tony",
+"👩‍🔬 Lily",
+"👨 志豪",
+"👩 美玲",
+"🧑 Ryan",
+"👨 Alex"
+];
+
+const choices = [
+"石頭",
+"剪刀",
+"布"
+];
+
+let players = [];
+let round = 1;
+let noEliminationRounds = 0;
+
+function startGame(){
+
+    const count =
+    parseInt(
+        document.getElementById(
+            "playerCount"
+        ).value
+    );
+
+    let shuffled =
+    [...computerNames]
+    .sort(() => Math.random() - 0.5);
+
+    players = [];
+
+    players.push({
+        name:"🧑 玩家",
+        alive:true
+    });
+
+    for(let i=2;i<=count;i++){
+
+        players.push({
+            name:shuffled[i-2],
+            alive:true
+        });
+    }
+
+    document.getElementById(
+        "setupCard"
+    ).style.display = "none";
+
+    document.getElementById(
+        "gameCard"
+    ).style.display = "block";
+
+    renderPlayers();
+
+    clearLog();
+
+    addLog(
+        `🎮 比賽開始，共 ${count} 位參賽者`
+    );
+}
+
+function renderPlayers(){
+
+    const box =
+    document.getElementById(
+        "players"
+    );
+
+    box.innerHTML = "";
+
+    players.forEach(player=>{
+
+        const div =
+        document.createElement("div");
+
+        div.className =
+        "player " +
+        (player.alive ?
+        "alive" :
+        "eliminated");
+
+        div.innerHTML = `
+            <h3>${player.name}</h3>
+            <p>
+            ${player.alive ?
+            "🟢 存活" :
+            "🔴 淘汰"}
+            </p>
+        `;
+
+        box.appendChild(div);
+    });
+}
+
+function getAlivePlayers(){
+
+    return players.filter(
+        p => p.alive
+    );
+}
+
+function winnerMove(moves){
+
+    const unique =
+    [...new Set(moves)];
+
+    if(unique.length !== 2)
+        return null;
+
+    if(
+        unique.includes("石頭") &&
+        unique.includes("剪刀")
+    ) return "石頭";
+
+    if(
+        unique.includes("剪刀") &&
+        unique.includes("布")
+    ) return "剪刀";
+
+    if(
+        unique.includes("布") &&
+        unique.includes("石頭")
+    ) return "布";
+
+    return null;
+}
+
+function clearLog(){
+
+    document.getElementById(
+        "log"
+    ).innerHTML = "";
+}
+
+function addLog(text){
+
+    document.getElementById(
+        "log"
+    ).innerHTML += text + "<br>";
+}
+
+function getPlayerRank(){
+
+    return getAlivePlayers().length + 1;
+}
+
+function endPlayerGame(rank){
+
+    document.body.innerHTML = `
+    <div class="fullscreen">
+
+        <div class="rank-title">
+            遊戲結束
+        </div>
+
+        <div class="rank-text">
+            🧑 玩家獲得第 ${rank} 名
+        </div>
+
+        <button
+        class="reset-btn"
+        onclick="location.reload()"
+        style="
+        margin-top:40px;
+        font-size:22px;">
+        🔄 再玩一次
+        </button>
+
+    </div>
+    `;
+}
+
+function showChampion(){
+
+    document.body.innerHTML = `
+    <div
+    class="fullscreen"
+    style="
+    background:
+    linear-gradient(
+    135deg,
+    #66bb6a,
+    #1b5e20
+    );">
+
+        <div class="champion-title">
+            🎊🎉👑🏆👑🎉🎊
+        </div>
+
+        <div class="champion-text">
+            恭喜獲得冠軍！
+        </div>
+
+        <button
+        class="reset-btn"
+        onclick="location.reload()"
+        style="
+        margin-top:40px;
+        font-size:22px;">
+        🔄 再玩一次
+        </button>
+
+    </div>
+    `;
+}
+
+function showComputerChampion(name){
+
+    document.body.innerHTML = `
+    <div class="fullscreen">
+
+        <div
+        class="rank-title"
+        style="color:#FFD700;">
+            比賽結束
+        </div>
+
+        <div class="rank-text">
+            👑 冠軍：${name}
+        </div>
+
+        <button
+        class="reset-btn"
+        onclick="location.reload()"
+        style="
+        margin-top:40px;
+        font-size:22px;">
+        🔄 再玩一次
+        </button>
+
+    </div>
+    `;
+}
+
+function playRound(playerChoice){
+
+    clearLog();
+
+    const alive =
+    getAlivePlayers();
+
+    if(alive.length <= 1)
+        return;
+
+    const roundMoves = [];
+
+    alive.forEach(player=>{
+
+        let move;
+
+        if(player.name==="🧑 玩家"){
+
+            move = playerChoice;
+
+        }else{
+
+            move =
+            choices[
+                Math.floor(
+                    Math.random()*3
+                )
+            ];
+        }
+
+        roundMoves.push({
+            player,
+            move
+        });
+    });
+
+    addLog(
+        `<b>第 ${round} 回合</b>`
+    );
+
+    addLog("");
+
+    roundMoves.forEach(item=>{
+
+        addLog(
+            `${item.player.name}：${item.move}`
+        );
+    });
+
+    const moves =
+    roundMoves.map(
+        r => r.move
+    );
+
+    const winMove =
+    winnerMove(moves);
+
+    if(!winMove){
+
+        noEliminationRounds++;
+
+        addLog("");
+        addLog("🤝 本回合無人淘汰");
+
+        if(
+            noEliminationRounds >= 3
+        ){
+
+            const computers =
+            getAlivePlayers().filter(
+                p =>
+                p.name !== "🧑 玩家"
+            );
+
+            if(computers.length){
+
+                const unlucky =
+                computers[
+                    Math.floor(
+                        Math.random() *
+                        computers.length
+                    )
+                ];
+
+                unlucky.alive = false;
+
+                addLog(
+                "⚡ 連續3回合無淘汰"
+                );
+
+                addLog(
+                `💀 ${unlucky.name} 被系統淘汰`
+                );
+
+                renderPlayers();
+            }
+
+            noEliminationRounds = 0;
+        }
+
+        round++;
+
+        document.getElementById(
+        "roundTitle"
+        ).innerText =
+        `第${round}回合`;
+
+        return;
+    }
+
+    noEliminationRounds = 0;
+
+    let eliminated = [];
+
+    roundMoves.forEach(item=>{
+
+        if(item.move !== winMove){
+
+            item.player.alive = false;
+
+            eliminated.push(
+                item.player.name
+            );
+        }
+    });
+
+    addLog("");
+    addLog(
+        `🏅 勝利手勢：${winMove}`
+    );
+
+    if(eliminated.length){
+
+        addLog(
+            `❌ 淘汰：${eliminated.join("、")}`
+        );
+    }
+
+    renderPlayers();
+
+    const human =
+    players.find(
+        p =>
+        p.name==="🧑 玩家"
+    );
+
+    if(!human.alive){
+
+        const rank =
+        getPlayerRank();
+
+        setTimeout(()=>{
+            endPlayerGame(rank);
+        },1200);
+
+        return;
+    }
+
+    const survivors =
+    getAlivePlayers();
+
+    if(survivors.length === 1){
+
+        if(
+            survivors[0].name ===
+            "🧑 玩家"
+        ){
+
+            setTimeout(()=>{
+                showChampion();
+            },1200);
+
+        }else{
+
+            setTimeout(()=>{
+                showComputerChampion(
+                    survivors[0].name
+                );
+            },1200);
+        }
+
+        return;
+    }
+
+    round++;
+
+    document.getElementById(
+    "roundTitle"
+    ).innerText =
+    `第${round}回合`;
+}
+
+</script>
+
+</body>
+</html>
